@@ -1,0 +1,101 @@
+create table users(id serial primary key, username varchar not null unique, phone_number varchar unique, email varchar unique, password varchar not null, created_at timestamp default now(), modified_at timestamp, created_by varchar default CURRENT_USER, modified_by varchar, active boolean default true);
+create table cards(id serial primary key, user_id int references users(id), number varchar, expire_date date, cvv int,owner_name varchar,bank_name varchar, created_at timestamp default now(), modified_at timestamp, created_by varchar default CURRENT_USER, modified_by varchar, active boolean default true);
+
+create or replace function sign_up(i_username varchar, i_phone_number varchar, i_email varchar, i_password varchar)
+returns table (
+    user_id int,
+    username varchar,
+    phone_number varchar,
+    email varchar,
+    created_at timestamp,
+    modified_at timestamp,
+    created_by varchar,
+    modified_by varchar,
+    active boolean
+)
+language plpgsql
+as
+$$
+declare
+    v_id int;
+begin
+    insert into users(username, phone_number, email, password)
+    values(i_username, i_phone_number, i_email, i_password)
+    returning id into v_id;
+
+    return query
+    select u.id, u.username, u.phone_number, u.email, u.created_at, u.modified_at, u.created_by, u.modified_by, u.active
+    from users u
+    where u.id = v_id;
+
+exception
+    when unique_violation then
+        raise exception 'Some data is duplicated: %', sqlerrm;
+end;
+$$;
+create or replace function sign_in(i_username varchar, i_password varchar)
+returns table (
+    user_id int,
+    username varchar,
+    phone_number varchar,
+    email varchar,
+    created_at timestamp,
+    modified_at timestamp,
+    created_by varchar,
+    modified_by varchar,
+    active boolean
+)
+language plpgsql
+as
+$$
+begin
+    return query
+        select u.id, u.username, u.phone_number, u.email, u.created_at, u.modified_at, u.created_by, u.modified_by, u.active
+        from users u
+        where u.username = i_username and u.password = i_password;
+end;
+$$;
+create or replace function create_card(i_user_id int, i_number varchar, i_expire_date date, i_cvv int, i_owner_name varchar, i_bank_name varchar)
+returns setof cards
+language plpgsql
+as
+$$
+declare
+    v_id int := 0;
+begin
+    insert into cards(user_id, number, expire_date, cvv, owner_name, bank_name)
+    values(i_user_id, i_number, i_expire_date, i_cvv, i_owner_name, i_bank_name)
+    returning id into v_id;
+
+    return query
+    select * from cards where id = v_id;
+
+exception
+    when unique_violation then
+        raise exception 'Some data is duplicated: %', sqlerrm;
+end;
+$$;
+create or replace function read_cards(i_user_id int)
+returns setof cards
+language plpgsql
+as
+$$
+begin
+    return query select * from cards where user_id = i_user_id;
+end;
+$$;
+create or replace function delete_card(i_id int)
+returns boolean
+language plpgsql
+as
+$$
+begin
+    update cards set active = false where id = i_id;
+
+    if not found then
+        raise exception 'No card found with id: %', i_id;
+    end if;
+
+    return true;
+end;
+$$;

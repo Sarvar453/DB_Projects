@@ -1,0 +1,63 @@
+db.createCollection("users", {
+validation : {
+  $jsonSchema: {
+    bsonType: 'object',
+    required: [
+      'username',
+      'email',
+      'phone_number',
+      'password',
+      'active'
+    ],
+    properties: {
+      username: {
+        bsonType: 'string'
+      },
+      email: {
+        bsonType: 'string'
+      },
+      phone_number: {
+        bsonType: 'string'
+      },
+      password: {
+        bsonType: 'string'
+      },
+      active: {
+        bsonType: 'bool'
+      },
+      todos: {
+        bsonType: 'array',
+        items: {
+          bsonType: 'object',
+          required: [
+            'title',
+            'description',
+            'completed',
+            'dueDate',
+            'priority'
+          ],
+          properties: {
+            title: {
+              bsonType: 'string'
+            },
+            description: {
+              bsonType: 'string'
+            },
+            completed: {
+              bsonType: 'bool'
+            },
+            dueDate: {
+              bsonType: 'date'
+            },
+            priority: {
+              bsonType: 'int',
+              minimum: 1,
+              maximum: 3
+            }
+          }
+        }
+      }
+    }
+  }
+}
+})
